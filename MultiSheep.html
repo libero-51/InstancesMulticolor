@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+</head>
+<body>
+<canvas id="renderCanvas" width="1000" height="800"></canvas>
+<script>
+var canvas = document.getElementById("renderCanvas");
+
+var startRenderLoop = function (engine, canvas) {
+    engine.runRenderLoop(function () {
+        if (sceneToRender && sceneToRender.activeCamera) {
+            sceneToRender.render();
+        }
+    });
+}
+
+var engine = null;
+var scene = null;
+var sceneToRender = null;
+var createDefaultEngine = function() { return new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true,  disableWebGL2Support: false}); };
+
+
+var createScene = function () {
+    var scene = new BABYLON.Scene(engine);
+    var light = new BABYLON.DirectionalLight("dir01", new BABYLON.Vector3(0, -0.5, -1.0), scene);
+    var camera = new BABYLON.ArcRotateCamera("Camera", -1.5, .9,100, BABYLON.Vector3.Zero(), scene);
+    camera.attachControl(canvas, false);
+    light.position = new BABYLON.Vector3(50, 250, 200);
+
+    // Ground
+    var ground = BABYLON.Mesh.CreateGround("ground", 1000, 1000, 1, scene, false);
+    var groundMaterial = new BABYLON.StandardMaterial("ground", scene);
+    groundMaterial.diffuseColor = new BABYLON.Color3(0.4, 1 , 0.4);
+    groundMaterial.specularColor = new BABYLON.Color3(0, 0, 0);
+    ground.material = groundMaterial;
+
+  let Animl;
+  let inst=[];
+  let sfa=[];
+  let prnt= [0,1,2,0,0,0,0,4,5,6,7,0,0,0];  // parent structure
+  let px=0,pz=0;
+  let rcl;
+  let rrl;
+  let cnt=99;
+
+  BABYLON.SceneLoader.ImportMesh("","Sheep/", "Sheep.babylon", scene,
+    function(newMeshes) {inst[0]=newMeshes;});
+
+  setTimeout(function() {
+    for (i = 1; i < inst[0].length; i++) {
+  //    alert(inst[0][i].parent.getClassName());
+
+    }
+
+    for (i = 0; i < inst[0].length; i++) {
+      inst[0][i].registerInstancedBuffer("color", 4);
+      inst[0][i].instancedBuffers.color = new BABYLON.Color4(1,1,1, 1);
+    }  
+    for (var k = 1; k <cnt; k++) {
+      sfa.push(Math.random()*6.28);
+      inst[k]=[];
+      pz+=8;if(pz>80){pz=0;px+=8;}
+      rcl=.2+Math.random()*.9;
+      for (i = 0; i < inst[0].length; i++) {
+        if (i==0){
+          inst[k][0]=inst[0][0].createInstance("inst_"+k+"_"+i);
+          inst[k][0].position=new BABYLON.Vector3(-30+px,3,+pz);
+          inst[k][0].instancedBuffers.color=new BABYLON.Color4(rcl,rcl,rcl,1);
+        }
+        else{
+          inst[k][i]=inst[0][i].createInstance("inst_"+k+"_"+i);
+          inst[k][i].parent = inst[k][prnt[i-1]];
+          inst[k][i].instancedBuffers.color=new BABYLON.Color4(rcl,rcl,rcl,1);
+        }
+      }
+  }
+  inst[0][0].setEnabled(false);
+  inst[0][0].setEnabled(true);
+  inst[0][0].position = new BABYLON.Vector3(-40, 4, 40);
+  inst[0][0].scaling= new BABYLON.Vector3(1.3,1.3,1.3);
+  let an=0,ann,anr;
+  scene.registerBeforeRender(function() { //-------------------------------------
+    for(let i=0;i<inst.length;i++){
+      ann= .6*Math.sin((an+sfa[i])/4);
+      anr= .6*Math.cos((an+sfa[i])/4);
+//      inst[3][ 0].rotation.y=an/20;          //corpo
+      inst[i][ 1].rotation.x= .8+ann/4 ;    //collo
+      inst[i][ 2].rotation.x= .6+ann*.1;    //testa e corna [ 3]
+      inst[i][ 4].rotation.x=    ann*.3;    //coscia dx
+      inst[i][ 5].rotation.x=   -ann*.3;    //coscia sx
+      inst[i][ 6].rotation.x=-.2-ann*.3;    //gamba  dx
+      inst[i][ 7].rotation.x=-.2+ann*.3;    //gamba  sx
+      inst[i][ 8].rotation.x=-.5+anr*.3;    //zampa post. sx
+      inst[i][ 9].rotation.x=-.5-anr*.3;    //zampa post. dx
+      inst[i][10].rotation.x= .2+anr*.3;    //zampa ante. dx
+      inst[i][11].rotation.x= .2-anr*.3;    //zampa ante. sx
+    }
+    an+=.15;
+  });
+  }, 500); 
+  return scene;
+};
+
+
+  window.initFunction = async function() {
+    
+  var asyncEngineCreation = async function() {
+    try {
+    return createDefaultEngine();
+    } catch(e) {
+    console.log("the available createEngine function failed. Creating the default engine instead");
+    return createDefaultEngine();
+    }
+  }
+
+  window.engine = await asyncEngineCreation();
+    if (!engine) throw 'engine should not be null.';
+    startRenderLoop(engine, canvas);
+    window.scene = createScene();};
+    initFunction().then(() => {sceneToRender = scene                    
+    });
+
+    // Resize
+    window.addEventListener("resize", function () {
+        engine.resize();
+    });
+</script>
+</body>
+</html>
+
+
